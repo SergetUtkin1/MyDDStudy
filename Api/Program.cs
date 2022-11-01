@@ -1,15 +1,45 @@
 using Api;
+using Api.Configs;
 using Api.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+var authsection = builder.Configuration.GetSection(AuthConfig.Position);
+var authConfing = authsection.Get<AuthConfig>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(o =>
+{
+    o.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "Enter token",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Scheme = JwtBearerDefaults.AuthenticationScheme,
+    });
+
+    o.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type=ReferenceType.SecurityScheme,
+                    Id = JwtBearerDefaults.AuthenticationScheme,
+                }
+            },
+            new List<string>{}
+        }
+    });
+});
 
 builder.Services.AddDbContext<DAL.DataContext>(options =>
 {
@@ -19,6 +49,36 @@ builder.Services.AddDbContext<DAL.DataContext>(options =>
 builder.Services.AddAutoMapper(typeof(MapperProfile).Assembly);
 
 builder.Services.AddScoped<UserService>();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+{
+    o.RequireHttpsMetadata = false;
+    o.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = authConfing.Issuer,
+
+        ValidateAudience = true,
+        ValidAudience = authConfing.Audence,
+
+        ValidateLifetime = true,
+
+        IssuerSigningKey = authConfing.GetSymmetricSecurityKey(),
+        ValidateIssuerSigningKey = true,
+
+        ClockSkew = TimeSpan.Zero,
+    };
+});
+
+builder.Services.AddAuthorization(o =>
+{
+    o.AddPolicy("ValidAccessToken", p =>
+    {
+        p.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        p.RequireAuthenticatedUser();
+    });
+});
 
 var app = builder.Build();
 
@@ -40,6 +100,7 @@ using (var scope = ((IApplicationBuilder)app).ApplicationServices.GetRequiredSer
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
