@@ -9,8 +9,10 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-var authsection = builder.Configuration.GetSection(AuthConfig.Position);
-var authConfing = authsection.Get<AuthConfig>();
+var authSection = builder.Configuration.GetSection(AuthConfig.Position);
+var authConfig = authSection.Get<AuthConfig>();
+
+builder.Services.Configure<AuthConfig>(authSection);
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -21,6 +23,7 @@ builder.Services.AddSwaggerGen(o =>
     {
         Description = "Enter token",
         Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Scheme = JwtBearerDefaults.AuthenticationScheme,
     });
@@ -34,7 +37,10 @@ builder.Services.AddSwaggerGen(o =>
                 {
                     Type=ReferenceType.SecurityScheme,
                     Id = JwtBearerDefaults.AuthenticationScheme,
-                }
+                },
+                Scheme = "oauth2",
+                Name = JwtBearerDefaults.AuthenticationScheme,
+                In = ParameterLocation.Header,
             },
             new List<string>{}
         }
@@ -57,15 +63,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     o.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
-        ValidIssuer = authConfing.Issuer,
+        ValidIssuer = authConfig.Issuer,
 
         ValidateAudience = true,
-        ValidAudience = authConfing.Audence,
+        ValidAudience = authConfig.Audience,
 
         ValidateLifetime = true,
 
-        IssuerSigningKey = authConfing.GetSymmetricSecurityKey(),
         ValidateIssuerSigningKey = true,
+        IssuerSigningKey = authConfig.GetSymmetricSecurityKey(),
 
         ClockSkew = TimeSpan.Zero,
     };
