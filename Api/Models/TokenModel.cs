@@ -2,11 +2,13 @@
 {
     public class TokenModel
     {
-        public string Jwt { get; set; }
+        public string AccessToken { get; set; }
+        public string RefreshToken { get; set; }
 
-        public TokenModel(string jwt)
+        public TokenModel(string accessToken, string refreshToken)
         {
-            Jwt = jwt;
+            AccessToken = accessToken;
+            RefreshToken = refreshToken;    
         }
     }
 }
