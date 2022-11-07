@@ -44,6 +44,32 @@ namespace Api.Services
                 throw new Exception("user not found");
             }
         }
+        
+        public async Task<DAL.Entities.UserSession> GetSessionById(Guid id)
+        {
+            var dbSession = await _context.UserSessions.FirstOrDefaultAsync(x => x.Id == id);
+            if (dbSession != null)
+            {
+                return dbSession;
+            }
+            else
+            {
+                throw new Exception("session is not found");
+            }
+        }
+
+        private async Task<DAL.Entities.UserSession> GetSessionByRefreshToken(Guid refreshToken)
+        {
+            var dbSession = await _context.UserSessions.Include(x => x.User).FirstOrDefaultAsync(x => x.RefreshToken == refreshToken);
+            if (dbSession != null)
+            {
+                return dbSession;
+            }
+            else
+            {
+                throw new Exception("session is not found");
+            }
+        }
 
         public async Task<UserModel> GetUser(Guid id)
         {
@@ -70,22 +96,24 @@ namespace Api.Services
             return user;
         }
 
-        private TokenModel GenerateTokens(DAL.Entities.User user)
+        private TokenModel GenerateTokens(DAL.Entities.UserSession userSession)
         {
             DateTime dtNow = DateTime.Now;
-            var myClaims = new Claim[] {
-                new Claim(ClaimsIdentity.DefaultNameClaimType, user.Name),
-                new Claim("id", user.Id.ToString()),
-            };
+
+            if (userSession.User == null)
+            {
+                throw new Exception("It's a kind of magic");
+            }
 
             var jwt = new JwtSecurityToken(
                 issuer: _config.Issuer,
                 audience: _config.Audience,
                 notBefore: dtNow,
-                expires: dtNow.AddMinutes(_config.LifeTime),
+                expires: DateTime.Now.AddMinutes(_config.LifeTime),
                 claims: new Claim[] {
-                new Claim(ClaimsIdentity.DefaultNameClaimType, user.Name),
-                new Claim("id", user.Id.ToString()),
+                new Claim(ClaimsIdentity.DefaultNameClaimType,  userSession.User.Name),
+                new Claim("id", userSession.User.Id.ToString()),
+                new Claim("sessionId", userSession.Id.ToString()),
             },
                 signingCredentials: new SigningCredentials(_config.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256)
                 );
@@ -93,10 +121,10 @@ namespace Api.Services
 
             var refresh = new JwtSecurityToken(
                 notBefore: dtNow,
-                expires: dtNow.AddHours(_config.LifeTime),
+                expires: DateTime.Now.AddHours(_config.LifeTime),
                 claims: new Claim[] {
-                new Claim(ClaimsIdentity.DefaultNameClaimType, user.Name),
-                new Claim("id", user.Id.ToString()),
+                new Claim(ClaimsIdentity.DefaultNameClaimType,  userSession.User.Name),
+                new Claim("refreshToken", userSession.RefreshToken.ToString()),
                 },
                 signingCredentials: new SigningCredentials(_config.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256)
                 );
@@ -108,8 +136,17 @@ namespace Api.Services
         public async Task<TokenModel> GetToken(string login, string password)
         {
             var userDb = await GetUserByCredentions(login, password);
+            var sessionDb = await _context.UserSessions.AddAsync(new DAL.Entities.UserSession()
+            {
+                Id = Guid.NewGuid(),
+                Created = DateTime.UtcNow,
+                RefreshToken = Guid.NewGuid(),
+                User = userDb,
+                
+            });
+            await _context.SaveChangesAsync();
 
-            return GenerateTokens(userDb);
+            return GenerateTokens(sessionDb.Entity);
         }
 
         public async Task<TokenModel> GetTokenByRefreshToken(string refreshToken)
@@ -131,11 +168,21 @@ namespace Api.Services
                 throw new SecurityTokenException("invalid token");
             }
 
-            if (claimsPrincipal.Claims.FirstOrDefault(x => x.Type == "id")?.Value is String userIdString
-                && Guid.TryParse(userIdString, out var userId))
+            if (claimsPrincipal.Claims.FirstOrDefault(x => x.Type == "refreshToken")?.Value is String refreshIdString
+                && Guid.TryParse(refreshIdString, out var refreshId))
             {
-                var user = await GetUserById(userId);
-                return GenerateTokens(user);
+                var session = await GetSessionByRefreshToken(refreshId);
+                if (!session.IsActive)
+                {
+                    throw new Exception("session is not active");
+                }
+
+                var user = session.User;
+
+                session.RefreshToken = Guid.NewGuid();
+                await _context.SaveChangesAsync();
+
+                return GenerateTokens(session);
             }
             else
             {
