@@ -4,6 +4,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Common;
 using DAL;
+using DAL.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -25,6 +26,13 @@ namespace Api.Services
             _config = options.Value;
         }
 
+        public async Task<bool> CheckUserExist(string email)
+        {
+
+            return await _context.Users.AnyAsync(x => x.Email.ToLower() == email.ToLower());
+
+        }
+
         public async Task CreateUser(CreateUserModel model)
         {
             var DBuser = _mapper.Map<DAL.Entities.User>(model);
@@ -32,9 +40,62 @@ namespace Api.Services
             await _context.SaveChangesAsync();
         }
 
+        public async Task Delete(Guid id)
+        {
+            var dbUser = await GetUserById(id);
+            if (dbUser != null)
+            {
+                _context.Users.Remove(dbUser);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task<UserModel> GetUser(Guid id)
+        {
+            var dbUser = await GetUserById(id);
+
+            return _mapper.Map<UserModel>(dbUser);
+        }
+
+        public async Task<List<UserModel>> GetUsers()
+        {
+            return await _context.Users.AsNoTracking().ProjectTo<UserModel>(_mapper.ConfigurationProvider).ToListAsync();
+        }
+
+        public async Task<Avatar?> GetUserAvatar(Guid id)
+        {
+            var userDb = await GetUserById(id);
+            if(userDb.Avatar == null)
+            {
+                throw new Exception("User doesn't have avatar");
+                // вообще наверное тут бы attach я бы присвоил костыль в виде аватара-заглушки, но не буду
+            }
+
+            var attach =  await _context.Avatars.FirstOrDefaultAsync(x => x.Id == userDb.Avatar.Id);
+            if(attach == null)
+            {
+                throw new Exception("This avatar doesn't exist");
+            }
+
+            return attach;
+        }
+
+        private async Task<DAL.Entities.User> GetUserByCredentions(string login, string password)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower().Trim() == login);
+
+            if (user == null)
+                throw new Exception("user not found");
+
+            if (!HashHelper.Verify(password, user.PasswordHash))
+                throw new Exception("password is not correct");
+
+            return user;
+        }
+
         public async Task<DAL.Entities.User> GetUserById(Guid id)
         {
-            var dbUser = await _context.Users.FirstOrDefaultAsync(p => p.Id == id);
+            var dbUser = await _context.Users.Include(x => x.Avatar).FirstOrDefaultAsync(p => p.Id == id);
             if (dbUser != null)
             {
                 return dbUser ;
@@ -44,7 +105,25 @@ namespace Api.Services
                 throw new Exception("user not found");
             }
         }
-        
+
+        public async Task AddAvatarToUser(Guid userId, MetadataModel meta, string filePath)
+        {
+            var user = await _context.Users.Include(x => x.Avatar).FirstOrDefaultAsync(x => x.Id == userId);
+            if (user != null)
+            {
+                var avatar = new Avatar { Author = user, 
+                    MimeType = meta.MimeType, 
+                    FilePath = filePath, 
+                    Name = meta.Name, 
+                    Size = meta.Size 
+                };
+                user.Avatar = avatar;
+
+                await _context.SaveChangesAsync();
+            }
+
+        }
+
         public async Task<DAL.Entities.UserSession> GetSessionById(Guid id)
         {
             var dbSession = await _context.UserSessions.FirstOrDefaultAsync(x => x.Id == id);
@@ -69,31 +148,6 @@ namespace Api.Services
             {
                 throw new Exception("session is not found");
             }
-        }
-
-        public async Task<UserModel> GetUser(Guid id)
-        {
-            var dbUser = await GetUserById(id);
-
-            return _mapper.Map<UserModel>(dbUser);
-        }
-
-        public async Task<List<UserModel>> GetUsers()
-        {
-            return await _context.Users.AsNoTracking().ProjectTo<UserModel>(_mapper.ConfigurationProvider).ToListAsync();
-        }
-
-        private async Task<DAL.Entities.User> GetUserByCredentions(string login, string password)
-        {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower().Trim() == login);
-
-            if (user == null)
-                throw new Exception("user not found");
-
-            if (!HashHelper.Verify(password, user.PasswordHash))
-                throw new Exception("password is not correct");
-
-            return user;
         }
 
         private TokenModel GenerateTokens(DAL.Entities.UserSession userSession)

@@ -1,6 +1,7 @@
 ﻿using Api.Models;
 using AutoMapper;
 using Common;
+using DAL.Entities;
 
 namespace Api
 {
@@ -14,6 +15,7 @@ namespace Api
                 .ForMember(d => d.BirthDate, m => m.MapFrom(s => s.BirthDate.UtcDateTime))
                 ;
             CreateMap<DAL.Entities.User, UserModel>();
+            CreateMap<Avatar, MetadataModel>();
         }
     }
 }
