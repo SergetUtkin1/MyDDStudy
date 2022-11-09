@@ -1,5 +1,7 @@
 ﻿using Api.Configs;
-using Api.Models;
+using Api.Models.Attach;
+using Api.Models.Token;
+using Api.Models.User;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Common;

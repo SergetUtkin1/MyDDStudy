@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Api.Models
+namespace Api.Models.User
 {
     public class CreateUserModel
     {
@@ -11,7 +11,7 @@ namespace Api.Models
         [Required]
         public string Password { get; set; }
         [Required]
-        [Compare(nameof(Password))] 
+        [Compare(nameof(Password))]
         public string RetryPassword { get; set; }
         [Required]
         public DateTimeOffset BirthDate { get; set; }

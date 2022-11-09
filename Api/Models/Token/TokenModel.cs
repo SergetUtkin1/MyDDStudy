@@ -1,4 +1,4 @@
-﻿namespace Api.Models
+﻿namespace Api.Models.Token
 {
     public class TokenModel
     {
@@ -8,7 +8,7 @@
         public TokenModel(string accessToken, string refreshToken)
         {
             AccessToken = accessToken;
-            RefreshToken = refreshToken;    
+            RefreshToken = refreshToken;
         }
     }
 }
