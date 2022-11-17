@@ -12,6 +12,7 @@ namespace DAL.Entities
         public string Description { get; set; } = null!;
         public DateTimeOffset CreatedDate { get; set; }
 
+        public Guid AuthorId { get; set; }
         public virtual User Author { get; set; } = null!;
         public virtual ICollection<PostContent> PostContent { get; set; } = null!;
         public virtual ICollection<Comment>? Comments { get; set; }

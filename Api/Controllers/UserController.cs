@@ -2,6 +2,8 @@
 using Api.Models.User;
 using Api.Services;
 using AutoMapper;
+using Common.Consts;
+using Common.Extentions;
 using DAL;
 using DAL.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +21,9 @@ namespace Api.Controllers
         public UserController(UserService userService)
         {
             _userService = userService;
+            if (userService != null)
+                _userService.SetLinkGenerator(x =>
+                Url.Action(nameof(GetUserAvatarById), new { userId = x.Id, download = false }));
         }
 
         [HttpPost]
@@ -46,11 +51,16 @@ namespace Api.Controllers
         }
 
         [HttpGet]
-        public async Task<FileResult> GetUserAvatarById(Guid id)
+        [AllowAnonymous]
+        public async Task<FileStreamResult> GetUserAvatarById(Guid userId, bool download = false)
         {
-            var avatar = await _userService.GetUserAvatar(id);
+            var attach = await _userService.GetUserAvatar(userId);
+            var fs = new FileStream(attach.FilePath, FileMode.Open);
+            if (download)
+                return File(fs, attach.MimeType, attach.Name);
+            else
+                return File(fs, attach.MimeType);
 
-            return File(System.IO.File.ReadAllBytes(avatar!.FilePath), avatar.MimeType);
         }
 
         [HttpGet]
@@ -71,8 +81,8 @@ namespace Api.Controllers
         [Authorize]
         public async Task<UserModel> GetCurrentUser()
         {
-            string? userId = User.Claims.FirstOrDefault(u => u.Type == "id")?.Value;
-            if (Guid.TryParse(userId, out var id))
+            var id = User.GetClaimValue<Guid>(ClaimNames.Id);
+            if (id != default)
             {
                 return await _userService.GetUser(id);
             }
@@ -93,5 +103,18 @@ namespace Api.Controllers
         [Authorize]
         public async Task<List<UserModel>> GetUsers()
             => await _userService.GetUsers();
+
+        [HttpGet]
+        public async Task<FileStreamResult> GetCurentUserAvatar(bool download = false)
+        {
+            var userId = User.GetClaimValue<Guid>(ClaimNames.Id);
+            if (userId != default)
+            {
+                return await GetUserAvatarById(userId, download);
+            }
+            else
+                throw new Exception("you are not authorized");
+
+        }
     }
 }

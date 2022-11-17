@@ -1,15 +1,21 @@
-﻿using Api.Models.User;
+﻿using Api.Models.Attach;
+using Api.Models.User;
 using DAL.Entities;
 
 namespace Api.Models.Post
 {
     public class CreatePostModel
     {
-        public Guid PostId { get; set; }
-        public string Description { get; set; } = null!;
-        public DateTimeOffset CreatedDate { get; set; }
+        public Guid Id { get; set; }
+        public string? Description { get; set; }
+        public Guid AuthorId { get; set; }
+        public List<MetaWithPath> Contents { get; set; } = new List<MetaWithPath>();
 
-        public UserModel Author { get; set; } = null!;
-        public  ICollection<PostContent> PostContent { get; set; } = null!;
+    }
+    public class CreatePostRequest
+    {
+        public string? Description { get; set; }
+        public List<MetadataModel> Contents { get; set; } = new List<MetadataModel>();
+
     }
 }
