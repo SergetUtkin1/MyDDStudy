@@ -20,30 +20,15 @@ namespace Api.Controllers
             _postService = postService;
             _postService.SetLinkGenerator(
                 linkAvatarGenerator: x =>
-                Url.Action(nameof(UserController.GetUserAvatarById), "User", new
+                Url.ControllerAction<AttachController>(nameof(AttachController.GetUserAvatarById), new
                 {
                     userId = x.Id,
-                    download = false
                 }),
-                linkContentGenerator: x => Url.Action(nameof(GetPostContent), new
+                linkContentGenerator: x => Url.ControllerAction<AttachController>(nameof(AttachController.GetPostContent), new
                 {
                     postContentId = x.Id,
-                    download = false
                 }))
                  ; 
-        }
-
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<FileStreamResult> GetPostContent(Guid postContentId, bool download = false)
-        {
-            var attach = await _postService.GetPostContent(postContentId);
-            var fs = new FileStream(attach.FilePath, FileMode.Open);
-            if (download)
-                return File(fs, attach.MimeType, attach.Name);
-            else
-                return File(fs, attach.MimeType);
-
         }
 
         [HttpGet]
@@ -63,7 +48,7 @@ namespace Api.Controllers
                 
                 Description = request.Description,
                 Contents = request.Contents.Select(x =>
-                new MetaWithPath(x, q => Path.Combine(
+                new MetadataLinkModel(x, q => Path.Combine(
                     Directory.GetCurrentDirectory(),
                     "attaches",
                     q.TempId.ToString()), userId)).ToList()

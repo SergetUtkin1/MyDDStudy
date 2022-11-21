@@ -18,18 +18,16 @@ namespace Api
                 .ForMember(d => d.BirthDate, m => m.MapFrom(s => s.BirthDate.UtcDateTime))
                 ;
             CreateMap<DAL.Entities.User, UserModel>();
+            CreateMap<User, UserAvatarModel>();
 
             CreateMap<Avatar, AttachModel>();
 
-            //CreateMap<User, UserAvatarModel>()
-            //                .ForMember(d => d.BirthDate, m => m.MapFrom(s => s.BirthDay))
-            //                .ForMember(d => d.PostsCount, m => m.MapFrom(s => s.Posts!.Count))
-            //                .AfterMap<UserAvatarMapperAction>();
+            CreateMap<PostContent, AttachExternalModel>();
+            CreateMap<AttachExternalModel, PostContent>();
 
-            CreateMap<PostContent, AttachModel>();
-
-            CreateMap<MetadataModel, PostContent>();
-            CreateMap<MetaWithPath, PostContent>();
+            CreateMap<CreatePostRequest, CreatePostModel>();
+            CreateMap<MetadataModel, MetadataLinkModel>();
+            CreateMap<MetadataLinkModel, PostContent>();
 
             CreateMap<CreatePostModel, Post>()
                 .ForMember(d => d.CreatedDate, m => m.MapFrom(s => DateTime.UtcNow))

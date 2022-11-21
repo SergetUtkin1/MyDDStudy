@@ -15,9 +15,9 @@ namespace Api.Services
     {
         private readonly IMapper _mapper;
         private readonly DAL.DataContext _context;
-        private Func<AttachModel, string?>? _linkContentGenerator;
-        private Func<UserModel, string?>? _linkAvatarGenerator;
-        public void SetLinkGenerator(Func<AttachModel, string?> linkContentGenerator, Func<UserModel, string?> linkAvatarGenerator)
+        private Func<PostContent, string?>? _linkContentGenerator;
+        private Func<User, string?>? _linkAvatarGenerator;
+        public void SetLinkGenerator(Func<PostContent, string?> linkContentGenerator, Func<User, string?> linkAvatarGenerator)
         {
             _linkAvatarGenerator = linkAvatarGenerator;
             _linkContentGenerator = linkContentGenerator;
@@ -46,17 +46,22 @@ namespace Api.Services
             var res = posts.Select(post =>
                 new PostModel
                 {
-                    Author = new UserAvatarModel(_mapper.Map<UserModel>(post.Author), post.Author.Avatar == null ? null : _linkAvatarGenerator),
+                    Author = _mapper.Map<User, UserAvatarModel>(post.Author, o => o.AfterMap(FixAvatar)),
                     Description = post.Description,
                     Id = post.PostId,
                     Contents = post.PostContent?.Select(x =>
-                    new AttachWithLinkModel(_mapper.Map<AttachModel>(x), _linkContentGenerator)).ToList()
+                    _mapper.Map<PostContent, AttachExternalModel>(x, o => o.AfterMap(FixContent))).ToList()
                 }).ToList();
 
 
             return res;
-
         }
+
+        private void FixContent(PostContent s, AttachExternalModel d)
+            => d.ContentLink = _linkContentGenerator?.Invoke(s);
+
+        private void FixAvatar(User s, UserAvatarModel d)
+            => d.AvatarLink = s.Avatar == null ? null : _linkAvatarGenerator?.Invoke(s);
 
         public async Task<AttachModel> GetPostContent(Guid postContentId)
         {

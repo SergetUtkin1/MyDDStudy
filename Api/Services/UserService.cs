@@ -15,7 +15,7 @@ namespace Api.Services
     {
         private readonly DAL.DataContext _context;
         private readonly IMapper _mapper;
-        private Func<UserModel, string?>? _linkGenerator;
+        private Func<User, string?>? _linkGenerator;
 
         public UserService(DataContext context, IMapper mapper, IOptions<AuthConfig> options)
         {
@@ -23,7 +23,7 @@ namespace Api.Services
             _mapper = mapper;
         }
 
-        public void SetLinkGenerator(Func<UserModel, string?> linkGenerator)
+        public void SetLinkGenerator(Func<User, string?> linkGenerator)
         {
             _linkGenerator = linkGenerator;
         }
@@ -52,32 +52,20 @@ namespace Api.Services
             }
         }
 
-        public async Task<UserModel> GetUser(Guid id)
+        public async Task<UserAvatarModel> GetUser(Guid id)
+            => _mapper.Map<User, UserAvatarModel>(await GetUserById(id), o => o.AfterMap(FixAvatar));
+
+        public async Task<IEnumerable<UserAvatarModel>> GetUsers() 
+            => (await _context.Users.AsNoTracking().Include(x => x.Avatar).ToListAsync())
+                .Select(x => _mapper.Map<User, UserAvatarModel>(x, o => o.AfterMap(FixAvatar)));
+
+
+        private void FixAvatar(User s, UserAvatarModel d)
+            => d.AvatarLink = s.Avatar == null ? null : _linkGenerator?.Invoke(s);
+        public async Task<AttachModel> GetUserAvatar(Guid id)
         {
-            var dbUser = await GetUserById(id);
-
-            return _mapper.Map<UserModel>(dbUser);
-        }
-
-        public async Task<List<UserModel>> GetUsers()
-        {
-            return await _context.Users.AsNoTracking().ProjectTo<UserModel>(_mapper.ConfigurationProvider).ToListAsync();
-        }
-
-        public async Task<Avatar?> GetUserAvatar(Guid id)
-        {
-            var userDb = await GetUserById(id);
-            if(userDb.Avatar == null)
-            {
-                throw new Exception("User doesn't have avatar");
-                // вообще наверное тут бы attach я бы присвоил костыль в виде аватара-заглушки, но не буду
-            }
-
-            var attach =  await _context.Avatars.FirstOrDefaultAsync(x => x.Id == userDb.Avatar.Id);
-            if(attach == null)
-            {
-                throw new Exception("This avatar doesn't exist");
-            }
+            var user = await GetUserById(id);
+            var attach = _mapper.Map<AttachModel>(user.Avatar);
 
             return attach;
         }
@@ -85,7 +73,7 @@ namespace Api.Services
         public async Task<DAL.Entities.User> GetUserById(Guid id)
         {
             var dbUser = await _context.Users.Include(x => x.Avatar).FirstOrDefaultAsync(p => p.Id == id);
-            if (dbUser != null)
+            if (dbUser != null && dbUser != default)
             {
                 return dbUser ;
             }
