@@ -18,11 +18,10 @@ namespace Api.Controllers
     {
         private readonly UserService _userService;
 
-        public UserController(UserService userService)
+        public UserController(UserService userService, LinkGeneratorService links)
         {
             _userService = userService;
-            if (userService != null)
-                _userService.SetLinkGenerator(x =>
+            links.LinkAvatarGenerator = (x =>
                 Url.ControllerAction<AttachController>(nameof(AttachController.GetUserAvatarById), new
                 {
                     userId = x.Id,
@@ -82,14 +81,7 @@ namespace Api.Controllers
             throw new Exception("U are not authorized");
         }
 
-        [HttpPost]
-        public async Task CreateUser(CreateUserModel model)
-        {
-            if (await _userService.CheckUserExist(model.Email))
-                throw new Exception("user is exist");
-            await _userService.CreateUser(model);
 
-        }
 
         [HttpGet]
         [Authorize]

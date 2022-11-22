@@ -15,7 +15,6 @@ namespace Api.Services
     {
         private readonly DAL.DataContext _context;
         private readonly IMapper _mapper;
-        private Func<User, string?>? _linkGenerator;
 
         public UserService(DataContext context, IMapper mapper, IOptions<AuthConfig> options)
         {
@@ -23,10 +22,6 @@ namespace Api.Services
             _mapper = mapper;
         }
 
-        public void SetLinkGenerator(Func<User, string?> linkGenerator)
-        {
-            _linkGenerator = linkGenerator;
-        }
 
         public async Task<bool> CheckUserExist(string email)
         {
@@ -53,15 +48,13 @@ namespace Api.Services
         }
 
         public async Task<UserAvatarModel> GetUser(Guid id)
-            => _mapper.Map<User, UserAvatarModel>(await GetUserById(id), o => o.AfterMap(FixAvatar));
+            => _mapper.Map<User, UserAvatarModel>(await GetUserById(id));
 
         public async Task<IEnumerable<UserAvatarModel>> GetUsers() 
-            => (await _context.Users.AsNoTracking().Include(x => x.Avatar).ToListAsync())
-                .Select(x => _mapper.Map<User, UserAvatarModel>(x, o => o.AfterMap(FixAvatar)));
+            => await _context.Users.AsNoTracking().Include(x => x.Avatar).Include(x => x.Posts)
+            .Select(x => _mapper.Map<User, UserAvatarModel>(x)).ToListAsync();
 
 
-        private void FixAvatar(User s, UserAvatarModel d)
-            => d.AvatarLink = s.Avatar == null ? null : _linkGenerator?.Invoke(s);
         public async Task<AttachModel> GetUserAvatar(Guid id)
         {
             var user = await GetUserById(id);
@@ -72,7 +65,7 @@ namespace Api.Services
 
         public async Task<DAL.Entities.User> GetUserById(Guid id)
         {
-            var dbUser = await _context.Users.Include(x => x.Avatar).FirstOrDefaultAsync(p => p.Id == id);
+            var dbUser = await _context.Users.Include(x => x.Avatar).Include(x => x.Posts).FirstOrDefaultAsync(p => p.Id == id);
             if (dbUser != null && dbUser != default)
             {
                 return dbUser ;

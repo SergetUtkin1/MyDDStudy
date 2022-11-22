@@ -1,5 +1,5 @@
-using Api;
 using Api.Configs;
+using Api.Mapper;
 using Api.Services;
 using Api.Utils.Validators;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -46,6 +46,9 @@ builder.Services.AddSwaggerGen(o =>
             new List<string>{}
         }
     });
+
+    o.SwaggerDoc("Auth", new OpenApiInfo { Title = "Auth" });
+    o.SwaggerDoc("Api", new OpenApiInfo { Title = "Api" });
 });
 
 builder.Services.AddDbContext<DAL.DataContext>(options =>
@@ -58,6 +61,7 @@ builder.Services.AddAutoMapper(typeof(MapperProfile).Assembly);
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PostService>();
+builder.Services.AddScoped<LinkGeneratorService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
@@ -103,7 +107,11 @@ using (var scope = ((IApplicationBuilder)app).ApplicationServices.GetRequiredSer
 //if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("Api/swagger.json", "Api");
+        c.SwaggerEndpoint("Auth/swagger.json", "Auth");
+    });
 }
 
 
