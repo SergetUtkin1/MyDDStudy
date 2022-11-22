@@ -56,7 +56,7 @@ namespace Api.Services
         public async Task<List<PostModel>> GetPosts(int skip, int take)
         {
             var posts = await _context.Posts
-                .Include(x => x.PostComments)
+                .Include(x => x.PostComments!).ThenInclude(x => x.Author).ThenInclude(x => x.Avatar)
                 .Include(x => x.Author).ThenInclude(x => x.Avatar)
                 .Include(x => x.PostContent).AsNoTracking().Skip(skip).Take(take)
                 .Select(x => _mapper.Map<PostModel>(x)).ToListAsync();
@@ -65,7 +65,19 @@ namespace Api.Services
             return posts;
         }
 
+        public async Task<PostModel> GetPostById(Guid id)
+        {
+            var post = await _context.Posts
+                  .Include(x => x.Author).ThenInclude(x => x.Avatar)
+                  .Include(x => x.PostContent).AsNoTracking()
+                  .Where(x => x.PostId == id)
+                  .Select(x => _mapper.Map<PostModel>(x))
+                  .FirstOrDefaultAsync();
+            if (post == null)
+                throw new Exception("Post not Found");
 
+            return post;
+        }
 
         public async Task<AttachModel> GetPostContent(Guid postContentId)
         {

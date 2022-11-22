@@ -49,5 +49,9 @@ namespace Api.Controllers
             }
             await _postService.CreatePost(request);
         }
+
+        [HttpGet]
+        public async Task<PostModel> GetPostById(Guid id)
+            => await _postService.GetPostById(id);
     }
 }
