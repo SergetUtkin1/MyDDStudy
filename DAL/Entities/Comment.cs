@@ -14,8 +14,5 @@ namespace DAL.Entities
         public virtual Avatar? Avatar { get; set; }
         public string Text { get; set; } = null!;
         public DateTimeOffset CreatedDate { get; set; }
-
-        public virtual Post PostOwner { get; set; } = null!;
-        public Guid PostOwnerId { get; set; }
     }
 }

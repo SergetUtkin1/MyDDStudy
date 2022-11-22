@@ -22,18 +22,41 @@ namespace Api.Services
             _context = context;
         }
 
-        public async Task CreatePost(CreatePostModel model)
+        public async Task CreatePost(CreatePostRequest request)
         {
-            var dbModel = _mapper.Map<Post>(model);
+            var model = _mapper.Map<CreatePostModel>(request);
 
+            model.Contents.ForEach(x =>
+            {
+                x.AuthorId = model.AuthorId;
+                x.FilePath = Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "attaches",
+                    x.TempId.ToString());
+
+                var tempFi = new FileInfo(Path.Combine(Path.GetTempPath(), x.TempId.ToString()));
+                if (tempFi.Exists)
+                {
+                    var destFi = new FileInfo(x.FilePath);
+                    if (destFi.Directory != null && !destFi.Directory.Exists)
+                        destFi.Directory.Create();
+
+                    File.Move(tempFi.FullName, x.FilePath, true);
+                }
+            });
+
+
+
+
+            var dbModel = _mapper.Map<Post>(model);
             await _context.Posts.AddAsync(dbModel);
             await _context.SaveChangesAsync();
-
         }
 
         public async Task<List<PostModel>> GetPosts(int skip, int take)
         {
             var posts = await _context.Posts
+                .Include(x => x.PostComments)
                 .Include(x => x.Author).ThenInclude(x => x.Avatar)
                 .Include(x => x.PostContent).AsNoTracking().Skip(skip).Take(take)
                 .Select(x => _mapper.Map<PostModel>(x)).ToListAsync();

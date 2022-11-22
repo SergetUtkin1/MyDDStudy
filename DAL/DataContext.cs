@@ -21,6 +21,7 @@ namespace DAL
             modelBuilder.Entity<User>().HasIndex(b => b.Name).IsUnique();
             modelBuilder.Entity<Avatar>().ToTable(nameof(Avatars));
             modelBuilder.Entity<PostContent>().ToTable(nameof(PostContent));
+            modelBuilder.Entity<PostComment>().ToTable(nameof(PostComment));
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -32,6 +33,7 @@ namespace DAL
         public DbSet<Avatar> Avatars => Set<Avatar>();
         public DbSet<PostContent> PostContent => Set<PostContent>();
         public DbSet<Post> Posts => Set<Post>();
+        public DbSet<PostComment> PostComment => Set<PostComment>();
         public DbSet<Comment> Comments => Set<Comment>();
     }
 }

@@ -40,39 +40,14 @@ namespace Api.Controllers
         [HttpPost]
         public async Task CreatePost(CreatePostRequest request)
         {
-            var userId = User.GetClaimValue<Guid>(ClaimNames.Id);
-            if (userId == default)
-                throw new Exception("not authorize");
-
-            var model = new CreatePostModel
+            if (!request.AuthorId.HasValue)
             {
-                AuthorId = userId,
-                
-                Description = request.Description,
-                Contents = request.Contents.Select(x =>
-                new MetadataLinkModel(x, q => Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    "attaches",
-                    q.TempId.ToString()), userId)).ToList()
-            };
-
-            model.Contents.ForEach(x =>
-            {
-                var tempFi = new FileInfo(Path.Combine(Path.GetTempPath(), x.TempId.ToString()));
-                if (tempFi.Exists)
-                {
-                    var destFi = new FileInfo(x.FilePath);
-                    if (destFi.Directory != null && !destFi.Directory.Exists)
-                        destFi.Directory.Create();
-
-                    System.IO.File.Copy(tempFi.FullName, x.FilePath, true);
-                    tempFi.Delete();
-                }
-
-            });
-
-            await _postService.CreatePost(model);
-
+                var userId = User.GetClaimValue<Guid>(ClaimNames.Id);
+                if (userId == default)
+                    throw new Exception("not authorize");
+                request.AuthorId = userId;
+            }
+            await _postService.CreatePost(request);
         }
     }
 }

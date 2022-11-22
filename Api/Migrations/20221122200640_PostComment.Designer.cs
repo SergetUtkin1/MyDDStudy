@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20221122200640_PostComment")]
+    partial class PostComment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -194,10 +197,10 @@ namespace Api.Migrations
                 {
                     b.HasBaseType("DAL.Entities.Comment");
 
-                    b.Property<Guid>("PostOwnerId")
+                    b.Property<Guid>("PostOwnerPostId")
                         .HasColumnType("uuid");
 
-                    b.HasIndex("PostOwnerId");
+                    b.HasIndex("PostOwnerPostId");
 
                     b.ToTable("PostComment", (string)null);
                 });
@@ -296,7 +299,7 @@ namespace Api.Migrations
 
                     b.HasOne("DAL.Entities.Post", "PostOwner")
                         .WithMany("PostComments")
-                        .HasForeignKey("PostOwnerId")
+                        .HasForeignKey("PostOwnerPostId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
