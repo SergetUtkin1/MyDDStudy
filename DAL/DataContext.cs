@@ -22,6 +22,7 @@ namespace DAL
             modelBuilder.Entity<Avatar>().ToTable(nameof(Avatars));
             modelBuilder.Entity<PostContent>().ToTable(nameof(PostContent));
             modelBuilder.Entity<PostComment>().ToTable(nameof(PostComment));
+            modelBuilder.Entity<PostLike>().ToTable(nameof(PostLikes));
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -35,5 +36,7 @@ namespace DAL
         public DbSet<Post> Posts => Set<Post>();
         public DbSet<PostComment> PostComment => Set<PostComment>();
         public DbSet<Comment> Comments => Set<Comment>();
+        public DbSet<PostLike> PostLikes => Set<PostLike>();
+        public DbSet<Like> Likes => Set<Like>();
     }
 }

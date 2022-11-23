@@ -3,6 +3,8 @@ using Api.Models.Attach;
 using Api.Models.Post;
 using Api.Models.User;
 using AutoMapper;
+using Common.Consts;
+using Common.Extentions;
 using DAL;
 using DAL.Entities;
 using Microsoft.AspNetCore.Routing;
@@ -56,10 +58,12 @@ namespace Api.Services
         public async Task<List<PostModel>> GetPosts(int skip, int take)
         {
             var posts = await _context.Posts
+                .Include(x => x.PostLikes!).ThenInclude(x => x.Author).ThenInclude(x => x.Avatar)
                 .Include(x => x.PostComments!).ThenInclude(x => x.Author).ThenInclude(x => x.Avatar)
                 .Include(x => x.Author).ThenInclude(x => x.Avatar)
                 .Include(x => x.PostContent).AsNoTracking().Skip(skip).Take(take)
-                .Select(x => _mapper.Map<PostModel>(x)).ToListAsync();
+                .Select(x => _mapper.Map<PostModel>(x))
+                .ToListAsync();
 
 
             return posts;
